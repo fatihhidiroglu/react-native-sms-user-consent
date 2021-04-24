@@ -27,6 +27,22 @@ class SmsUserConsentModule(reactContext: ReactApplicationContext) : ReactContext
   override fun getName(): String {
     return "SmsUserConsent"
   }
+  
+  private val googleApiAvailability by lazy {
+    GoogleApiAvailability.getInstance()
+  }
+
+  private val googleConnectionStatus by lazy {
+    try {
+      return@lazy googleApiAvailability.isGooglePlayServicesAvailable(reactContext)
+    }
+    catch (e: java.lang.Exception) {
+      Log.d(TAG, "googleApiAvailability.error.catch: " + e.message)
+      return@lazy null
+    }
+  }
+
+  private fun isGooglePlayServicesAvailable() = googleConnectionStatus == ConnectionResult.SUCCESS
 
   @ReactMethod
   fun listenOTP(promise: Promise) {
@@ -34,7 +50,7 @@ class SmsUserConsentModule(reactContext: ReactApplicationContext) : ReactContext
       promise.reject(E_OTP_ERROR, Error("Reject previous request"))
     }
     this.promise = promise
-    if (reactContext?.currentActivity != null) {
+    if (reactContext?.currentActivity != null && isGooglePlayServicesAvailable()) {
       val task: Task<Void> = SmsRetriever.getClient(reactContext.currentActivity!!).startSmsUserConsent(null)
       task.addOnSuccessListener(object : OnSuccessListener<Void?> {
         override fun onSuccess(aVoid: Void?) {
