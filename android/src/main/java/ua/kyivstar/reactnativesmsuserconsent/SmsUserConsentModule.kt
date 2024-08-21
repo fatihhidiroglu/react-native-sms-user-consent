@@ -2,14 +2,19 @@ package ua.kyivstar.reactnativesmsuserconsent
 
 import android.app.Activity
 import android.app.Activity.RESULT_OK
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
+import androidx.core.content.ContextCompat
 import com.facebook.react.bridge.*
 import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.android.gms.tasks.Task
-
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.common.ConnectionResult
+import android.util.Log
 
 class SmsUserConsentModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
   private val reactContext: ReactApplicationContext? = reactContext
@@ -18,6 +23,7 @@ class SmsUserConsentModule(reactContext: ReactApplicationContext) : ReactContext
   private val E_OTP_ERROR = "E_OTP_ERROR"
   private val RECEIVED_OTP_PROPERTY = "receivedOtpMessage"
   val SMS_CONSENT_REQUEST = 1244
+  private val TAG = "SmsUserConsentModule"
 
   override fun initialize() {
     super.initialize()
@@ -73,9 +79,14 @@ class SmsUserConsentModule(reactContext: ReactApplicationContext) : ReactContext
 
   private fun registerReceiver() {
     if (reactContext?.currentActivity != null) {
-      receiver = SmsRetrieveBroadcastReceiver(reactContext.currentActivity)
-      val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
-      reactContext.currentActivity?.registerReceiver(receiver, intentFilter)
+        receiver = SmsRetrieveBroadcastReceiver(reactContext.currentActivity)
+        val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            reactContext.currentActivity?.registerReceiver(receiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            reactContext.currentActivity?.registerReceiver(receiver, intentFilter)
+        }
     }
   }
 
