@@ -33,7 +33,7 @@ class SmsUserConsentModule(reactContext: ReactApplicationContext) : ReactContext
   override fun getName(): String {
     return "SmsUserConsent"
   }
-  
+
   private val googleApiAvailability by lazy {
     GoogleApiAvailability.getInstance()
   }
@@ -79,13 +79,20 @@ class SmsUserConsentModule(reactContext: ReactApplicationContext) : ReactContext
 
   private fun registerReceiver() {
     if (reactContext?.currentActivity != null) {
-        receiver = SmsRetrieveBroadcastReceiver(reactContext.currentActivity)
+
+        //Denemeler yaparken SmsRetrieveBroadcastReceiver yapısını google dökümanındakine göre ayarladım ama sorun burda değil sonradan eski haline döndürülebilir
+        SmsRetrieveBroadcastReceiver.setActivity(reactContext.currentActivity)
+        receiver = SmsRetrieveBroadcastReceiver()
+
         val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
 
+        //Playstore Device and network abuse policy: Intent Redirection, hatası için receiver register edilirken bu permission eklenmeli
+        val permission = "com.google.android.gms.auth.api.phone.permission.SEND"
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            reactContext.currentActivity?.registerReceiver(receiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
+            reactContext.currentActivity?.registerReceiver(receiver, intentFilter,permission,null, Context.RECEIVER_NOT_EXPORTED)
         } else {
-            reactContext.currentActivity?.registerReceiver(receiver, intentFilter)
+            reactContext.currentActivity?.registerReceiver(receiver, intentFilter,permission,null)
         }
     }
   }
