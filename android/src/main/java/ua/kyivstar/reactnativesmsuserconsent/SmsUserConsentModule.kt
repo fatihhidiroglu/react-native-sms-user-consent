@@ -41,8 +41,7 @@ class SmsUserConsentModule(reactContext: ReactApplicationContext) : ReactContext
   private val googleConnectionStatus by lazy {
     try {
       return@lazy googleApiAvailability.isGooglePlayServicesAvailable(reactContext)
-    }
-    catch (e: java.lang.Exception) {
+    } catch (e: java.lang.Exception) {
       Log.d(TAG, "googleApiAvailability.error.catch: " + e.message)
       return@lazy null
     }
@@ -78,29 +77,34 @@ class SmsUserConsentModule(reactContext: ReactApplicationContext) : ReactContext
   }
 
   private fun registerReceiver() {
-    if (reactContext?.currentActivity != null) {
-
-        //Denemeler yaparken SmsRetrieveBroadcastReceiver yapısını google dökümanındakine göre ayarladım ama sorun burda değil sonradan eski haline döndürülebilir
+    if (reactContext?.currentActivity != null && receiver == null) {
+        // Receiver yalnızca bir kez kaydedilmeli
         SmsRetrieveBroadcastReceiver.setActivity(reactContext.currentActivity)
         receiver = SmsRetrieveBroadcastReceiver()
 
         val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
 
-        //Playstore Device and network abuse policy: Intent Redirection, hatası için receiver register edilirken bu permission eklenmeli
+        // Playstore Device and network abuse policy: Intent Redirection hatası için receiver register edilirken bu permission eklenmeli
         val permission = "com.google.android.gms.auth.api.phone.permission.SEND"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            reactContext.currentActivity?.registerReceiver(receiver, intentFilter,permission,null, Context.RECEIVER_NOT_EXPORTED)
+            reactContext.currentActivity?.registerReceiver(receiver, intentFilter, permission, null, Context.RECEIVER_NOT_EXPORTED)
         } else {
-            reactContext.currentActivity?.registerReceiver(receiver, intentFilter,permission,null)
+            reactContext.currentActivity?.registerReceiver(receiver, intentFilter, permission, null)
         }
     }
   }
 
   private fun unregisterReceiver() {
-    if (receiver != null) {
-      reactContext?.currentActivity?.unregisterReceiver(receiver)
-      receiver = null
+    try {
+      // Receiver zaten varsa ve kaydedilmişse, sadece o zaman unregister edilecek
+      receiver?.let {
+        reactContext?.currentActivity?.unregisterReceiver(it)
+        receiver = null
+      }
+    } catch (e: IllegalArgumentException) {
+      // Hata alırsan, receiver zaten kayıtlı değil demektir, uyarı logu yaz
+      Log.w(TAG, "Receiver not registered, skipping unregister")
     }
   }
 
@@ -108,7 +112,7 @@ class SmsUserConsentModule(reactContext: ReactApplicationContext) : ReactContext
     override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, intent: Intent?) {
       when (requestCode) {
         SMS_CONSENT_REQUEST -> {
-          unregisterReceiver()
+          unregisterReceiver()  // İşlem sonrasında receiver'ı kaldır
           if (resultCode == RESULT_OK) {
             // Get SMS message content
             val message = intent?.getStringExtra(SmsRetriever.EXTRA_SMS_MESSAGE)
@@ -123,5 +127,4 @@ class SmsUserConsentModule(reactContext: ReactApplicationContext) : ReactContext
       }
     }
   }
-
 }
